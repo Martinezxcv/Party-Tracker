@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/parties")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class PartyController {
 
     private final PartyService partyService;
