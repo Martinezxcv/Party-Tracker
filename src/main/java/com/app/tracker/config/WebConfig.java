@@ -14,10 +14,10 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(
+                        .allowedOriginPatterns(
                                 "http://localhost:5173",
                                 "https://party-tracker-vmer.onrender.com",
-                                "https://party-tracker-5xxf0qjfj-martinezxcv.vercel.app"
+                                "https://party-tracker-*.vercel.app"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
