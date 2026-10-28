@@ -20,7 +20,7 @@ public class PartyController {
     }
 
     @GetMapping("/pin/{pinCode}")
-    public ResponseEntity<Party> getPartyByPin(@PathVariable String pinCode) {
+    public ResponseEntity<Party> getPartyByPin(@PathVariable("pinCode") String pinCode) {
         return ResponseEntity.ok(partyService.getPartyByPin(pinCode));
     }
 
