@@ -16,7 +16,8 @@ public class WebConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:5173",
-                                "https://party-tracker-vmer.onrender.com" //
+                                "https://party-tracker-vmer.onrender.com",
+                                "https://party-tracker-5xxf0qjfj-martinezxcv.vercel.app"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
