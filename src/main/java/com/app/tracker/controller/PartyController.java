@@ -1,36 +1,31 @@
 package com.app.tracker.controller;
 
-import com.app.tracker.model.Game;
-import com.app.tracker.model.Player;
+import com.app.tracker.model.Party;
 import com.app.tracker.service.PartyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/parties")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class PartyController {
 
     private final PartyService partyService;
 
-    @GetMapping("/parties/{partyId}/players")
-    public List<Player> getPlayers(@PathVariable Long partyId) {
-        return partyService.getPlayersForParty(partyId);
+    @PostMapping
+    public ResponseEntity<Party> createParty(@RequestBody Party request) {
+        return ResponseEntity.ok(partyService.createParty(request.getName()));
     }
 
-    @GetMapping("/parties/{partyId}/games")
-    public List<Game> getGames(@PathVariable Long partyId) {
-        return partyService.getGamesForParty(partyId);
+    @GetMapping("/pin/{pinCode}")
+    public ResponseEntity<Party> getPartyByPin(@PathVariable String pinCode) {
+        return ResponseEntity.ok(partyService.getPartyByPin(pinCode));
     }
 
-    @PostMapping("/players/{playerId}/add-points")
-    public Player addPoints(
-            @PathVariable Long playerId,
-            @RequestParam int points,
-            @RequestParam(required = false) Long gameId) {
-        return partyService.addPointsToPlayer(playerId, points, gameId);
+    @PostMapping("/{partyId}/validate")
+    public ResponseEntity<Boolean> validatePin(@PathVariable Long partyId, @RequestBody String pinCode) {
+        return ResponseEntity.ok(partyService.validatePartyPin(partyId, pinCode));
     }
 }
