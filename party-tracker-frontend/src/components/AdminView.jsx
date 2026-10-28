@@ -1,5 +1,6 @@
 import React from 'react';
 import { getAvatarImage } from '../utils/avatars';
+import { deletePlayer } from '../services/api';
 
 export default function AdminView({
                                       partyId,
@@ -13,16 +14,11 @@ export default function AdminView({
         if (!window.confirm(`Czy na pewno chcesz usunąć gracza "${nickname}"?`)) return;
 
         try {
-            const res = await fetch(`http://localhost:8080/api/players/${playerId}`, {
-                method: 'DELETE'
-            });
+            await deletePlayer(playerId);
 
-            if (!res.ok) {
-                alert('Błąd podczas usuwania gracza.');
-            }
         } catch (err) {
             console.error(err);
-            alert('Błąd połączenia z serwerem.');
+            alert('Błąd połączenia z serwerem lub usuwania gracza.');
         }
     };
 

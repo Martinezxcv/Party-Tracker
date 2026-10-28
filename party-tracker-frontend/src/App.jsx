@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { getPlayers, addPoints } from './services/api';
+import {
+  getPlayers,
+  getGames,
+  getActiveGame,
+  activateGame,
+  createParty,
+  getPartyByPin,
+  joinParty,
+  addPoints
+} from './services/api';
 import RoleSelect from './components/RoleSelect';
 import ParticipantView from './components/ParticipantView';
 import Navbar from './components/Navbar';
@@ -23,26 +32,19 @@ export default function App() {
   const [games, setGames] = useState([]);
   const [activeGame, setActiveGame] = useState(null);
 
+  const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080';
+
   const loadInitialData = async () => {
     if (!partyId) return;
     try {
-      // 1. Gracze
       const playersData = await getPlayers(partyId);
       setPlayers(playersData.sort((a, b) => b.totalScore - a.totalScore));
 
-      // 2. Wszystkie gry do panelu Admina
-      const gamesRes = await fetch('http://localhost:8080/api/games');
-      if (gamesRes.ok) {
-        const gamesData = await gamesRes.json();
-        setGames(gamesData);
-      }
+      const gamesData = await getGames();
+      setGames(gamesData);
 
-      // 3. Aktualnie aktywna gra
-      const activeRes = await fetch('http://localhost:8080/api/games/active');
-      if (activeRes.ok) {
-        const activeData = await activeRes.json();
-        setActiveGame(activeData);
-      }
+      const activeData = await getActiveGame();
+      setActiveGame(activeData);
     } catch (err) {
       console.error('Błąd podczas ładowania danych:', err);
     }
@@ -55,7 +57,7 @@ export default function App() {
     loadInitialData();
 
     // Połączenie WebSocket przez SockJS i STOMP
-    const socket = new SockJS('http://localhost:8080/ws-party');
+    const socket = new SockJS(`${wsUrl}/ws-party`);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       debug: () => {},
@@ -78,7 +80,6 @@ export default function App() {
 
     stompClient.activate();
 
-    // Czyszczenie połączenia przy wylogowaniu lub zmianie komponentu
     return () => {
       stompClient.deactivate();
     };
@@ -87,38 +88,24 @@ export default function App() {
   // Funkcja aktywowania gry przez Hosta w panelu admina
   const handleSelectActiveGame = async (gameId) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/games/${gameId}/activate`, {
-        method: 'POST'
-      });
-      if (!res.ok) {
-        alert('Nie udało się zmienić aktywnej gry.');
-      }
+      await activateGame(gameId);
     } catch (err) {
       console.error(err);
+      alert('Nie udało się zmienić aktywnej gry.');
     }
   };
 
   // TWORZENIE NOWEJ IMPREZY PRZEZ HOSTA
   const handleHostStart = async (partyName) => {
     try {
-      const res = await fetch('http://localhost:8080/api/parties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: partyName })
-      });
+      const newParty = await createParty(partyName);
+      setPartyId(newParty.id);
+      setPartyPin(newParty.pinCode);
+      setRole('host');
 
-      if (res.ok) {
-        const newParty = await res.json();
-        setPartyId(newParty.id);
-        setPartyPin(newParty.pinCode);
-        setRole('host');
-
-        localStorage.setItem('party_role', 'host');
-        localStorage.setItem('party_id', newParty.id);
-        localStorage.setItem('party_pin', newParty.pinCode);
-      } else {
-        alert('Nie udało się utworzyć imprezy.');
-      }
+      localStorage.setItem('party_role', 'host');
+      localStorage.setItem('party_id', newParty.id);
+      localStorage.setItem('party_pin', newParty.pinCode);
     } catch (err) {
       console.error(err);
       alert('Błąd połączenia z serwerem podczas tworzenia imprezy');
@@ -128,62 +115,39 @@ export default function App() {
   // Wznawianie istniejącej imprezy jako Host za pomocą PIN-u
   const handleResumeHost = async (pin) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/parties/pin/${pin}`);
+      const partyData = await getPartyByPin(pin);
+      setPartyId(partyData.id);
+      setPartyPin(partyData.pinCode);
+      setRole('host');
 
-      if (res.ok) {
-        const partyData = await res.json();
-        setPartyId(partyData.id);
-        setPartyPin(partyData.pinCode);
-        setRole('host');
-
-        localStorage.setItem('party_role', 'host');
-        localStorage.setItem('party_id', partyData.id);
-        localStorage.setItem('party_pin', partyData.pinCode);
-      } else {
-        alert('Nie znaleziono imprezy o takim PIN-ie!');
-      }
+      localStorage.setItem('party_role', 'host');
+      localStorage.setItem('party_id', partyData.id);
+      localStorage.setItem('party_pin', partyData.pinCode);
     } catch (err) {
       console.error(err);
-      alert('Błąd połączenia z serwerem');
+      alert('Nie znaleziono imprezy o takim PIN-ie!');
     }
   };
 
-  //  Dołączenie jako Player
+  // Dołączenie jako Player
   const handleJoinParty = async (pin, nickname, avatar) => {
     try {
-      const partyRes = await fetch(`http://localhost:8080/api/parties/pin/${pin}`);
-
-      if (!partyRes.ok) {
-        alert('Nie znaleziono imprezy o takim PIN-ie!');
-        return;
-      }
-
-      const partyData = await partyRes.json();
+      const partyData = await getPartyByPin(pin);
       const targetPartyId = partyData.id;
 
-      const res = await fetch(`http://localhost:8080/api/parties/${targetPartyId}/players`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: nickname, avatar: avatar })
-      });
+      const playerdata = await joinParty(targetPartyId, nickname, avatar);
+      setPartyId(targetPartyId);
+      setPartyPin(pin);
+      setMyPlayerName(playerdata.nickname);
+      setRole('participant');
 
-      if (res.ok) {
-        const playerdata = await res.json();
-        setPartyId(targetPartyId);
-        setPartyPin(pin);
-        setMyPlayerName(playerdata.nickname);
-        setRole('participant');
-
-        localStorage.setItem('party_role', 'participant');
-        localStorage.setItem('party_id', targetPartyId);
-        localStorage.setItem('party_pin', pin);
-        localStorage.setItem('party_player_name', playerdata.nickname);
-      } else {
-        alert('Nie udało się dołączyć do gry.');
-      }
+      localStorage.setItem('party_role', 'participant');
+      localStorage.setItem('party_id', targetPartyId);
+      localStorage.setItem('party_pin', pin);
+      localStorage.setItem('party_player_name', playerdata.nickname);
     } catch (err) {
       console.error(err);
-      alert('Błąd połączenia z serwerem');
+      alert('Błąd połączenia z serwerem lub zły PIN');
     }
   };
 
@@ -236,7 +200,6 @@ export default function App() {
                 <AdminView
                     partyId={partyId}
                     players={players}
-                    onRefreshPlayers={loadInitialData}
                     games={games}
                     activeGameId={activeGame?.id}
                     onSelectActiveGame={handleSelectActiveGame}
