@@ -42,7 +42,7 @@ export default function GameView({ activeGame }) {
                             <h3 className="text-xs font-bold uppercase tracking-wider text-purple-400 mb-1 flex items-center gap-1.5">
                                 <Info className="w-4 h-4" /> Game Rules
                             </h3>
-                            <p className="text-slate-200 text-sm">{activeGame.rules}</p>
+                            <p className="text-slate-200 text-sm whitespace-pre-line">{activeGame.rules}</p>
                         </div>
                     </div>
                 )}
