@@ -60,7 +60,7 @@ export const addPoints = async (playerId, points, gameId = null) => {
     const res = await fetch(`${API_URL}/players/${playerId}/points`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: points, gameId })
+        body: JSON.stringify({ points, gameId })
     });
     if (!res.ok) throw new Error('Błąd dodawania punktów');
     return res.json();
